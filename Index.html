@@ -27,7 +27,7 @@
       display: flex;
       flex-direction: column;
     }
-    
+
     .balance {
       font-size: 1.2rem;
       margin-bottom: 8px;
@@ -83,6 +83,29 @@
       text-align: center;
       animation: fadeIn 1s ease-in-out infinite alternate;
       padding: 8px 0;
+    }
+
+    /* Desktop tweaks */
+    @media (min-width: 768px) {
+      .dashboard {
+        height: 300px;
+      }
+
+      .balance {
+        font-size: 1.5rem;
+      }
+
+      .amount {
+        font-size: 2.5rem;
+      }
+
+      .activity-log {
+        font-size: 1rem;
+      }
+
+      .idle-message {
+        font-size: 0.9rem;
+      }
     }
   </style>
 </head>
