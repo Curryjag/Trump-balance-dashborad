@@ -84,9 +84,8 @@
       animation: fadeIn 1s ease-in-out infinite alternate;
       padding: 8px 0;
     }
-
-    /* Desktop tweaks */
-    @media (min-width: 768px) {
+    
+      @media (min-width: 768px) {
       .dashboard {
         height: 400px;
       }
@@ -105,7 +104,7 @@
 
       .idle-message {
         font-size: 0.9rem;
-      }
+      }                     
     }
   </style>
 </head>
@@ -121,32 +120,71 @@
     <div class="idle-message" id="idleMsg">⏳ Awaiting wallet connection...</div>
   </div>
 
+  <!-- Firebase SDK -->
+  <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
+  
   <script>
+    // Initialize Firebase
+    const firebaseConfig = {
+      apiKey: "AIzaSyAuzAP-nBbSZfLPhHRpUM12Ikx29X8cubc",
+      authDomain: "wallet-dashboard-c1f5b.firebaseapp.com",
+      databaseURL: "https://wallet-dashboard-c1f5b-default-rtdb.firebaseio.com",
+      projectId: "wallet-dashboard-c1f5b",
+      storageBucket: "wallet-dashboard-c1f5b.appspot.com",
+      messagingSenderId: "256709610703",
+      appId: "1:256709610703:web:64abb94f87aab57beefbba",
+      measurementId: "G-LTXHVWPBLR"
+    };
+    firebase.initializeApp(firebaseConfig);
+    const database = firebase.database();
+
+    // DOM elements
     const balanceDisplay = document.getElementById("balanceDisplay");
     const statusBox = document.getElementById("statusBox");
     const logBox = document.getElementById("logBox");
     const idleMsg = document.getElementById("idleMsg");
 
-    let balance = localStorage.getItem("walletBalance")
-      ? parseInt(localStorage.getItem("walletBalance"))
-      : 5000000;
+    // Initialize data
+    let balance = 5000000;
+    let logs = [];
+    const walletRef = database.ref('walletData');
 
-    let logs = localStorage.getItem("walletLogs")
-      ? JSON.parse(localStorage.getItem("walletLogs"))
-      : [];
+    // Load data from Firebase or initialize
+    walletRef.once('value').then(snapshot => {
+      if (snapshot.exists()) {
+        const data = snapshot.val();
+        balance = data.balance;
+        logs = data.logs || [];
+      } else {
+        walletRef.set({ balance, logs });
+      }
+      updateDisplay();
+    });
+
+    // Real-time updates
+    walletRef.on('value', snapshot => {
+      const data = snapshot.val();
+      if (data) {
+        balance = data.balance;
+        logs = data.logs || [];
+        updateDisplay();
+      }
+    });
+
+    function updateDisplay() {
+      balanceDisplay.textContent = `$${balance.toLocaleString()}`;
+      renderLogs();
+    }
 
     function renderLogs() {
       logBox.innerHTML = "";
-      for (const log of logs) {
+      logs.forEach(log => {
         const div = document.createElement("div");
         div.className = "log-entry";
         div.textContent = log;
         logBox.appendChild(div);
-      }
-    }
-
-    function updateBalanceDisplay() {
-      balanceDisplay.textContent = `$${balance.toLocaleString()}`;
+      });
     }
 
     function simulateWalletConnection() {
@@ -173,27 +211,23 @@
     function deductBalance(amount) {
       balance -= amount;
       if (balance <= 0) {
-        updateBalanceDisplay();
+        updateDisplay();
         logActivity("Balance depleted");
         setTimeout(() => {
           balance = 5000000;
-          updateBalanceDisplay();
           logActivity("Balance refilled to $5,000,000");
           logs = [];
-          localStorage.setItem("walletLogs", JSON.stringify(logs));
-          renderLogs();
-          localStorage.setItem("walletBalance", balance);
+          walletRef.set({ balance, logs });
+          updateDisplay();
         }, 3000);
-      } else {
-        updateBalanceDisplay();
       }
-      localStorage.setItem("walletBalance", balance);
+      walletRef.set({ balance, logs });
     }
 
     function logActivity(message) {
       const timestampedMsg = `${new Date().toLocaleTimeString()} - ${message}`;
       logs.unshift(timestampedMsg);
-      localStorage.setItem("walletLogs", JSON.stringify(logs));
+      walletRef.set({ balance, logs });
       renderLogs();
     }
 
@@ -214,8 +248,7 @@
       }, time);
     }
 
-    updateBalanceDisplay();
-    renderLogs();
+    // Start the app
     randomIntervalCall();
   </script>
 </body>
